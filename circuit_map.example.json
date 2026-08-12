@@ -1,0 +1,17 @@
+{
+  "//": "Example combine map for Emporia_Energy.py. Copy to circuit_map.json and edit, or just generate one for your own panel: python Emporia_Energy.py --generate-circuit-map",
+  "//2": "Each entry sums its member channels into ONE reported circuit -- typically the two legs of a 240V circuit. The key is the name the combined circuit reports under. Keys starting with // or _ are comments and are ignored.",
+  "//3": "A member can be written three ways, shown below. An entry matching fewer than two channels is reported as a warning and left uncombined, so a typo never silently drops data.",
+
+  "_Up Comp": "\"<device_gid>:<channel>\" -- the exact form --generate-circuit-map writes",
+  "Up Comp": ["123456:5", "123456:6"],
+
+  "_Down Comp": "a bare channel number, unambiguous when the account has one device",
+  "Down Comp": ["3", "4"],
+
+  "_Water Heater": "a channel name, which matches EVERY channel with that name -- the case where the Emporia app gives both legs the same name",
+  "Water Heater": ["Water Heater"],
+
+  "_Well": "members can be mixed, and a group can hold three or more channels",
+  "Well": ["123456:9", "10"]
+}

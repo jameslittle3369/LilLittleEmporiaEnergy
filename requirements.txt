@@ -1,0 +1,15 @@
+# Emporia_Energy.py dependencies
+#   pip install -r requirements.txt
+
+# Emporia Vue cloud API client
+pyemvue>=0.17,<1.0
+
+# Loads credentials/config from .env
+python-dotenv>=1.0.0
+
+# Chart rendering for --charts / --sendemail
+matplotlib>=3.8
+
+# IANA timezone database -- required on Windows, where zoneinfo has no
+# system tzdata, so TIMEZONE names like America/Chicago resolve.
+tzdata>=2024.1

@@ -1,0 +1,31 @@
+# --- Secrets: never commit these ------------------------------------------
+.env
+emporia_tokens.json
+
+# --- Machine-specific config ----------------------------------------------
+# Your combine map holds your own device gids and circuit names.
+# circuit_map.example.json is the template, and it IS committed.
+circuit_map.json
+.claude/settings.local.json
+
+# --- Generated output ------------------------------------------------------
+reports/
+*.csv
+usage.json
+
+# --- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# --- Editors / OS ----------------------------------------------------------
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
