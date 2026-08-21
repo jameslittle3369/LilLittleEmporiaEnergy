@@ -13,3 +13,6 @@ matplotlib>=3.8
 # IANA timezone database -- required on Windows, where zoneinfo has no
 # system tzdata, so TIMEZONE names like America/Chicago resolve.
 tzdata>=2024.1
+
+# POSTs readings to sensors-backend-fastapi for --push-api
+requests>=2.31

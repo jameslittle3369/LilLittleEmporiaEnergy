@@ -41,12 +41,19 @@ python Emporia_Energy.py --sendemail
 
 # machine-readable output, including the daily series
 python Emporia_Energy.py --json > usage.json
+
+# push each circuit's current reading to sensors-backend-fastapi and exit
+# (no report/chart/email output) -- this is what the scheduled/automated
+# run uses; --sendemail/--json/--charts are for manual or separately
+# cron'd use
+python Emporia_Energy.py --push-api
 ```
 
 ### Options
 
 | Flag | Default | Purpose |
 | --- | --- | --- |
+| `--push-api` | off | POST each circuit's reading to `API_BASE_URL` and exit -- no report/chart/email |
 | `--sendemail` | off | additionally email the report and charts via Gmail SMTP |
 | `--charts` | off | render chart PNGs without emailing |
 | `--generate-circuit-map` | — | write a combine map for this account and exit |

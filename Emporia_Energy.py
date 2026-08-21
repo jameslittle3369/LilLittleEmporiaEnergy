@@ -47,6 +47,11 @@ try:
 except ImportError:  # pragma: no cover - dependency guard
     sys.exit("Missing dependency 'pyemvue'.  Run: pip install -r requirements.txt")
 
+try:
+    import requests
+except ImportError:  # pragma: no cover - dependency guard
+    requests = None  # only required for --push-api
+
 
 # --------------------------------------------------------------------------
 # Channel bookkeeping
@@ -275,6 +280,7 @@ class Config:
     email_to: list[str]
     subject_prefix: str
     attach_csv: bool
+    api_base_url: str
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -299,6 +305,7 @@ class Config:
             email_to=_env_list("EMAIL_TO"),
             subject_prefix=_env("EMAIL_SUBJECT_PREFIX", "Emporia Energy Report"),
             attach_csv=_env_bool("EMAIL_ATTACH_CSV", True),
+            api_base_url=_env("API_BASE_URL"),
         )
 
     @cached_property
@@ -1043,6 +1050,54 @@ def send_email(cfg: Config, report: Report, charts: Sequence[tuple[Path, str]]) 
 
 
 # --------------------------------------------------------------------------
+# API push (--push-api)
+# --------------------------------------------------------------------------
+
+
+def push_circuits_to_api(cfg: Config, report: Report) -> int:
+    """POST each circuit's current reading to sensors-backend-fastapi.
+
+    Used for the scheduled/automated run -- skips report/chart/email
+    entirely. Circuits with no current reading (current_w is None, the
+    API returned nothing this cycle) are skipped rather than logging a
+    fabricated zero.
+    """
+    if requests is None:
+        sys.exit("--push-api needs the 'requests' package.  Run: pip install -r requirements.txt")
+    if not cfg.api_base_url:
+        sys.exit("--push-api needs API_BASE_URL set in .env")
+
+    base = cfg.api_base_url.rstrip("/")
+    pushed = 0
+    for circuit in report.circuits:
+        if circuit.current_w is None:
+            continue
+        # device_gid:channel_num -- unlike channel_num alone, this pair is
+        # guaranteed unique even across accounts with multiple devices
+        # (two devices can each have a mains channel literally named
+        # "1,2,3"), so it's the right key to re-derive from row dicts too.
+        external_id = f"{circuit.device_gid}:{circuit.channel_num}"
+        url = f"{base}/energy-circuits/emporia/{external_id}/log"
+        body = {
+            "name": circuit.label,
+            "watts": circuit.current_w,
+            "kwh_today": circuit.window_kwh([report.today]),
+            "kwh_7d": circuit.window_kwh(report.last_7),
+            "kwh_30d": circuit.window_kwh(report.last_30),
+            "kwh_mtd": circuit.window_kwh(report.month_to_date),
+        }
+        try:
+            response = requests.post(url, json=body, timeout=10)
+            response.raise_for_status()
+            pushed += 1
+        except requests.RequestException as exc:
+            warn(f"failed to push circuit {circuit.label!r} to API: {exc}")
+
+    info(f"Pushed {pushed}/{len(report.circuits)} circuit(s) to {base}.")
+    return 0 if pushed else 1
+
+
+# --------------------------------------------------------------------------
 # Entry point
 # --------------------------------------------------------------------------
 
@@ -1052,6 +1107,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         prog="Emporia_Energy.py",
         description="Per-circuit Emporia Vue energy report: current watts, today, last 7d, last 30d, month to date.",
     )
+    parser.add_argument("--push-api", action="store_true",
+                        help="POST each circuit's current reading to sensors-backend-fastapi "
+                             "(API_BASE_URL) and exit -- no report/chart/email output. This is "
+                             "what the scheduled/automated run uses.")
     parser.add_argument("--sendemail", action="store_true",
                         help="additionally email the report and charts via Gmail SMTP")
     parser.add_argument("--charts", action="store_true",
@@ -1183,6 +1242,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         days=days,
         circuits=circuits,
     )
+
+    if args.push_api:
+        return push_circuits_to_api(cfg, report)
 
     if args.json:
         print(json.dumps(report.to_dict(), indent=2))
